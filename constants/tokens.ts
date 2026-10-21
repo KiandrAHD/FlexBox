@@ -28,6 +28,7 @@ export const colors = {
 export const fontFamilies = {
   display: "Space Grotesk",
   body: "Inter",
+  bodySemibold: "Inter-SemiBold",
 } as const;
 
 // ─── Spacing (base unit: 4px) ──────────────────────────────────────────────────
