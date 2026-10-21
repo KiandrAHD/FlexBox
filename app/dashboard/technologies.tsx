@@ -1,16 +1,1 @@
-import { View, Text } from "react-native";
-
-/**
- * Dashboard Technologies — Phase 0 placeholder.
- * Kelola teknologi in Phase 3.
- */
-export default function DashboardTechnologiesScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-admin-canvas">
-      <Text className="text-xl font-semibold text-ink">Kelola Teknologi</Text>
-      <Text className="mt-2 text-sm text-graphite">
-        Manajemen teknologi — segera hadir.
-      </Text>
-    </View>
-  );
-}
+import React from 'react'; import { ResourcePage } from '../../components/admin/ResourcePage'; export default function Technologies() { return <ResourcePage eyebrow="05 / Technologies" title="Teknologi" description="Katalog teknologi untuk proyek studio." table="technologies" />; }

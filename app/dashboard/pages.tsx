@@ -1,0 +1,1 @@
+import React from 'react'; import { ResourcePage } from '../../components/admin/ResourcePage'; export default function Pages() { return <ResourcePage eyebrow="02 / Pages" title="Halaman" description="Konten halaman dan bagian website Flexbox." table="pages" />; }

@@ -1,0 +1,32 @@
+import { router } from 'expo-router';
+
+import { Linking, View } from 'react-native';
+import { colors, spacing } from '../../constants/tokens';
+import { projects, technologies, repositoryUrl, type HomeSection } from '../../features/home/mock-data';
+import { Container } from '../../components/primitives/Container';
+import { Button } from '../../components/primitives/Button';
+import { SectionHeading } from '../../components/primitives/SectionHeading';
+import { Typography } from '../../components/primitives/Typography';
+
+
+import { HeroGeometry } from '../../components/public/HeroGeometry';
+import { useBreakpoint } from '../../hooks/useBreakpoint';
+
+function ProjectVisual({ kind }: { kind: 'workspace' | 'directory' }) {
+  return <View style={{ flex: 1, minHeight: 320, backgroundColor: kind === 'workspace' ? colors.pale : colors.graphite, padding: spacing[8], justifyContent: 'space-between' }}><View style={{ width: 76, height: 76, borderWidth: 1, borderColor: kind === 'workspace' ? colors.blue : colors.pale, transform: [{ rotate: '45deg' }] }} /><View style={{ alignItems: 'flex-end' }}><Typography variant="label" style={{ color: kind === 'workspace' ? colors.graphite : colors.white }}>FLEXBOX / STUDY</Typography></View></View>;
+}
+
+export default function HomeScreen() {
+  const { isMobile } = useBreakpoint();
+  const navigate = (section: HomeSection) => router.push(section === 'home' ? '/' : ('/' + section) as any);
+  return <View style={{ flex: 1, backgroundColor: colors.paper }}><>
+    <View style={{ minHeight: isMobile ? 760 : 790, justifyContent: 'center', overflow: 'hidden' }}><Container><View style={{ flexDirection: isMobile ? 'column' : 'row', alignItems: 'center', gap: spacing[8] }}><View style={{ flex: 1, zIndex: 1, gap: spacing[8] }}><Typography variant="label" style={{ color: colors.blue }}>■ &nbsp; INDEPENDENT DIGITAL STUDIO / 2026</Typography><Typography variant="hero" accessibilityLevel={1}>We build digital{ '\n' }things that <Typography variant="hero" style={{ color: colors.blue }}>matter.</Typography></Typography><View style={{ flexDirection: isMobile ? 'column' : 'row', gap: spacing[8], alignItems: isMobile ? 'stretch' : 'flex-start', marginTop: spacing[6] }}><Typography variant="body" style={{ maxWidth: 430, color: colors.graphite }}>We’re a small team exploring how software engineering, design, and digital products can make complex things useful.</Typography><View style={{ gap: spacing[3], minWidth: isMobile ? undefined : 180 }}><Button label="Explore projects" variant="dark" onPress={() => navigate('projects')} /><Button label="Meet the team" variant="light" onPress={() => navigate('team')} /></View></View></View><View style={{ position: isMobile ? 'relative' : 'absolute', right: 0, bottom: 0, opacity: isMobile ? 1 : .2, width: isMobile ? '100%' : undefined, marginTop: isMobile ? spacing[8] : 0 }}><HeroGeometry compact={isMobile} /></View></View></Container></View>
+    <View><Container><View style={{ paddingVertical: spacing[16] }}><SectionHeading index="01" label="Selected work" title="A few things we have made." action={<Button label="Explore concepts" variant="text" onPress={() => Linking.openURL(repositoryUrl)} />} />{projects.map(project => <View key={project.id} style={{ flexDirection: isMobile ? 'column' : project.id === 'sela' ? 'row-reverse' : 'row', gap: spacing[8], marginBottom: spacing[16] }}><ProjectVisual kind={project.kind} /><View style={{ flex: 1, justifyContent: 'center', gap: spacing[4] }}><Typography variant="label" style={{ color: colors.blue }}>{project.number} / {project.category}</Typography><Typography variant="h3">{project.title}</Typography><Button label="View project" variant="text" onPress={() => router.push({pathname: '/projects/[slug]', params: {slug: project.id}})} /><Typography style={{ color: colors.graphite }}>{project.summary}</Typography><Typography variant="small" style={{ color: colors.muted }}>{project.technologies}</Typography></View></View>)}</View></Container></View>
+    <View style={{ backgroundColor: colors.ink, paddingVertical: spacing[16] }}><Container><View style={{ flexDirection: isMobile ? 'column' : 'row', gap: spacing[12] }}><View style={{ flex: 1 }}><Typography variant="label" style={{ color: colors.blue }}>02 / Technology</Typography><Typography variant="h2" style={{ color: colors.white, marginTop: spacing[4] }}>Good tools, used with intention.</Typography></View><View style={{ flex: 1 }}>{technologies.map((technology, index) => <View key={technology.name} style={{ paddingVertical: spacing[6], borderTopWidth: 1, borderColor: colors.graphite, gap: spacing[2] }}><View style={{ flexDirection: 'row', justifyContent: 'space-between' }}><Typography style={{ color: colors.white }}>{technology.name}</Typography><Typography variant="small" style={{ color: colors.blue }}>0{index + 1}</Typography></View><Typography variant="small" style={{ color: colors.muted }}>{technology.description}</Typography></View>)}</View></View></Container></View>
+    <View><Container><View style={{ paddingVertical: spacing[16], gap: spacing[8] }}><Typography variant="label" style={{ color: colors.blue }}>03 / The studio</Typography><View style={{ flexDirection: isMobile ? 'column' : 'row', gap: spacing[12], alignItems: 'flex-start' }}><View style={{ flex: 1, minHeight: 260, backgroundColor: colors.graphite, justifyContent: 'flex-end', padding: spacing[6] }}><Typography variant="label" style={{ color: colors.white }}>PEOPLE / PROCESS / CURIOSITY</Typography></View><View style={{ flex: 1, gap: spacing[6] }}><Typography variant="h2">Small team. Clear thinking.</Typography><Typography style={{ color: colors.graphite }}>We bring design and technology together to make useful, durable things. The work starts with listening and ends with something people can use.</Typography><Button label="Meet the team" variant="text" onPress={() => navigate('team')} /></View></View></View></Container></View>
+    <View style={{ backgroundColor: colors.pale, paddingVertical: spacing[16] }}><Container><View style={{ gap: spacing[8] }}><Typography variant="label" style={{ color: colors.blue }}>04 / Contact</Typography><Typography variant="cta" style={{ maxWidth: 1000 }}>Have a good idea? Let us make it real.</Typography><Button label="Start a conversation" variant="blue" onPress={() => navigate('contact')} /></View></Container></View>
+    
+  </></View>;
+}
+
+

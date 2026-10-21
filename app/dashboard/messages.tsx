@@ -1,16 +1,1 @@
-import { View, Text } from "react-native";
-
-/**
- * Dashboard Messages — Phase 0 placeholder.
- * Inbox pesan kontak in Phase 3.
- */
-export default function DashboardMessagesScreen() {
-  return (
-    <View className="flex-1 items-center justify-center bg-admin-canvas">
-      <Text className="text-xl font-semibold text-ink">Pesan Masuk</Text>
-      <Text className="mt-2 text-sm text-graphite">
-        Inbox pesan kontak — segera hadir.
-      </Text>
-    </View>
-  );
-}
+import React from 'react'; import { ResourcePage } from '../../components/admin/ResourcePage'; export default function Messages() { return <ResourcePage eyebrow="06 / Inbox" title="Pesan masuk" description="Pesan kontak privat. Hanya admin dapat mengakses isi pesan." table="contact_messages" />; }
