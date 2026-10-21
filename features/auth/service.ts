@@ -1,5 +1,6 @@
 import { requireSupabase } from '../../lib/supabase';
 import type { Profile } from '../../types/cms';
+import { verifyAdmin } from './verifyAdmin';
 
 /** No demo login, public signup, or client role assignment. Database policies enforce access. */
 export async function getAdminProfile(): Promise<Profile | null> {
@@ -14,16 +15,12 @@ export async function getAdminProfile(): Promise<Profile | null> {
 export async function signInAdmin(email: string, password: string): Promise<Profile> {
   const client = requireSupabase();
   const result = await client.auth.signInWithPassword({ email: email.trim(), password });
-  if (result.error) throw new Error('Login gagal. Periksa kredensial Anda.');
-  try {
-    const profile = await getAdminProfile();
-    if (profile) return profile;
-  } catch {
-    await client.auth.signOut();
-    throw new Error('Akses admin tidak tersedia.');
-  }
-  await client.auth.signOut();
-  throw new Error('Akses admin tidak tersedia.');
+  if (result.error || !result.data.session || !result.data.user) throw new Error('Login gagal atau sesi tidak dibuat. Periksa kredensial Anda.');
+  const verified = await verifyAdmin(client, result.data.user.id);
+  if (verified.status !== 'admin') throw new Error(verified.error || 'Akses workspace belum diaktifkan.');
+  const profile = await getAdminProfile();
+  if (!profile) throw new Error('Profil admin tidak lagi tersedia. Periksa akses kembali.');
+  return profile;
 }
 export async function signOut() {
   const { error } = await requireSupabase().auth.signOut();

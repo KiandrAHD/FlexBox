@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import type { PageSection } from '../../types/cms';
 import { supabase } from '../../lib/supabase';
 import { useAdminAuth } from '../../features/auth/AuthProvider';
@@ -36,12 +36,21 @@ export function PageSectionsEditor({ pageId }: { pageId: string }) {
   const [order, setOrder] = useState('0');
   const [json, setJson] = useState(template);
   const [status, setStatus] = useState<'draft' | 'published'>('draft');
+  const [baseline, setBaseline] = useState('');
+  const [discard, setDiscard] = useState(false);
+  const dirty = !!editing && JSON.stringify([key, order, json, status]) !== baseline;
+  useEffect(() => {
+    if (Platform.OS !== 'web' || !dirty) return;
+    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [dirty]);
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const load = useCallback(async () => {
     if (!supabase || auth.status !== 'admin') return;
     setLoading(true); setError('');
     try {
-      const result = await supabase.from('page_sections').select('*').eq('page_id', pageId).order('sort_order').order('id');
+      const result = await supabase.from('page_sections').select('*').eq('page_id', pageId).order('sort_order').order('id').limit(100);
       if (result.error) throw result.error;
       setRows(result.data as PageSection[]);
     } catch { setRows([]); setError('Bagian halaman tidak dapat dimuat. Periksa koneksi dan policy RLS.'); }
@@ -51,6 +60,8 @@ export function PageSectionsEditor({ pageId }: { pageId: string }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, [load]);
   function open(row?: PageSection) {
+    setDiscard(false);
+    setBaseline(JSON.stringify([row?.section_key ?? '', String(row?.sort_order ?? rows.length), row ? JSON.stringify(row.content, null, 2) : template, row?.status ?? 'draft']));
     setEditing(row?.id ?? 'new'); setKey(row?.section_key ?? ''); setOrder(String(row?.sort_order ?? rows.length));
     setJson(row ? JSON.stringify(row.content, null, 2) : template); setStatus(row?.status ?? 'draft'); setNotice('');
   }
@@ -83,20 +94,22 @@ export function PageSectionsEditor({ pageId }: { pageId: string }) {
   }
   return <View style={{ gap: 16, borderTopWidth: 1, borderColor: '#D8D8D5', paddingTop: 24 }}>
     <Text accessibilityRole="header" style={styles.heading}>Bagian halaman</Text>
-    <Text style={styles.body}>Urutan kecil tampil lebih dahulu. Bagian published hanya tampil publik jika halaman juga published.</Text>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}><AdminButton disabled={busy || loading} onPress={() => open()}>Tambah bagian</AdminButton><AdminButton secondary disabled={busy || loading} onPress={() => void load()}>Muat ulang bagian</AdminButton></View>
+    <Text style={styles.body}>Maksimal 100 bagian ditampilkan. Urutan kecil tampil lebih dahulu. Bagian published hanya tampil publik jika halaman juga published.</Text>
+    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}><AdminButton disabled={busy || loading || !!editing} onPress={() => open()}>Tambah bagian</AdminButton><AdminButton secondary disabled={busy || loading || dirty} onPress={() => void load()}>Muat ulang bagian</AdminButton></View>
     {!!notice && <Text accessibilityRole="alert" style={styles.body}>{notice}</Text>}
     {editing && <View style={styles.panel}>
+      <Text accessibilityLiveRegion="polite" style={styles.eyebrow}>{busy ? 'Menyimpan?' : dirty ? 'Perubahan belum disimpan' : 'Tidak ada perubahan'}</Text>
       <AdminField label="Section key" value={key} onChangeText={setKey} autoCapitalize="none" editable={!busy} />
       <AdminField label="Urutan (integer)" value={order} onChangeText={setOrder} keyboardType="numbers-and-punctuation" editable={!busy} />
       <AdminField label="Content JSON" value={json} onChangeText={setJson} multiline autoCapitalize="none" autoCorrect={false} maxLength={200000} editable={!busy} style={{ minHeight: 240 }} />
       <Text style={styles.body}>{'Semua kind memerlukan title string. hero: eyebrow, body, actions[{label,href}]. narrative: paragraphs[string]. principles: items[{title,body}]. collection: source (projects/team/technologies), limit (1–100). contact: body, email (string atau null). Teks bukan HTML.'}</Text>
       <Text style={styles.label}>Publikasi: {status}</Text><AdminButton secondary disabled={busy} onPress={() => setStatus(value => value === 'draft' ? 'published' : 'draft')}>{status === 'draft' ? 'Ubah ke published' : 'Ubah ke draft'}</AdminButton>
-      <AdminButton disabled={busy} onPress={() => void save()}>{busy ? 'Menyimpan…' : 'Simpan bagian'}</AdminButton><AdminButton secondary disabled={busy} onPress={() => setEditing(null)}>Batal</AdminButton>
+      <AdminButton disabled={busy} onPress={() => void save()}>{busy ? 'Menyimpan…' : 'Simpan bagian'}</AdminButton><AdminButton secondary disabled={busy} onPress={() => { if (dirty) setDiscard(true); else setEditing(null); }}>Batal</AdminButton>
+       {discard && <><Text style={styles.error}>Buang perubahan yang belum disimpan?</Text><AdminButton secondary disabled={busy} onPress={() => { setEditing(null); setDiscard(false); }}>Buang perubahan</AdminButton><AdminButton secondary disabled={busy} onPress={() => setDiscard(false)}>Lanjutkan mengedit</AdminButton></>}
     </View>}
     {loading ? <AdminNotice busy title="Memuat bagian…" /> : error ? <AdminNotice title="Bagian belum tersedia" message={error} /> : !rows.length ? <AdminNotice title="Belum ada bagian" message="Tambahkan bagian pertama dengan key unik dan content JSON." /> : rows.map(row => <View key={row.id} style={styles.panel}>
       <Text style={styles.heading}>{row.section_key}</Text><Text style={styles.body}>Urutan {row.sort_order} · {row.content.kind} · {row.status}</Text>
-      <AdminButton secondary disabled={busy} onPress={() => open(row)}>Edit bagian / urutan / publikasi</AdminButton>
+      <AdminButton secondary disabled={busy || !!editing} onPress={() => open(row)}>Edit bagian / urutan / publikasi</AdminButton>
       {confirmDelete === row.id ? <><Text style={styles.error}>Hapus bagian ini secara permanen? Tindakan ini tidak dapat dibatalkan.</Text><AdminButton disabled={busy} onPress={() => void remove(row.id)}>Konfirmasi hapus</AdminButton><AdminButton secondary disabled={busy} onPress={() => setConfirmDelete(null)}>Batal hapus</AdminButton></> : <AdminButton secondary disabled={busy} onPress={() => setConfirmDelete(row.id)}>Hapus bagian</AdminButton>}
     </View>)}
   </View>;

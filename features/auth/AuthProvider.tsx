@@ -2,8 +2,9 @@ import React, { createContext, useCallback, useContext, useEffect, useRef, useSt
 import type { Session } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
 import { supabase } from '../../lib/supabase';
+import { verifyAdmin } from './verifyAdmin';
 
-type AuthStatus = 'checking' | 'unconfigured' | 'signed-out' | 'admin' | 'denied' | 'error';
+type AuthStatus = 'checking' | 'unconfigured' | 'signed-out' | 'admin' | 'no-profile' | 'denied' | 'error';
 type AuthValue = { status: AuthStatus; email: string; error: string; refresh: () => void; signOut: () => Promise<void> };
 const AuthContext = createContext<AuthValue | null>(null);
 
@@ -59,14 +60,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!candidate.session) { setStatus('signed-out'); return; }
     const verify = async () => {
       try {
-        const { data: { user }, error: userError } = await client.auth.getUser();
+        const result = await verifyAdmin(client, candidate.session!.user.id);
         if (!current()) return;
-        if (userError || !user || user.id !== candidate.session?.user.id) { setStatus('signed-out'); return; }
-        const { data: profile, error: profileError } = await client.from('profiles').select('role').eq('id', user.id).maybeSingle();
-        if (!current()) return;
-        if (profileError) { setError('Hak akses tidak dapat diverifikasi. Periksa koneksi dan kebijakan profiles.'); setStatus('error'); return; }
-        setEmail(user.email ?? 'Admin');
-        setStatus(profile?.role === 'admin' ? 'admin' : 'denied');
+        setEmail(result.email); setError(result.error); setStatus(result.status);
       } catch {
         if (current()) { setError('Verifikasi sesi gagal. Akses dashboard ditutup.'); setStatus('error'); }
       }
@@ -74,6 +70,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void verify();
     return () => { cancelled = true; };
   }, [candidate]);
+
+  useEffect(() => {
+    if (status !== 'checking') return;
+    const timer = setTimeout(() => {
+      ++generation.current;
+      setError('Verifikasi melewati batas waktu. Periksa koneksi lalu coba kembali.');
+      setStatus('error');
+    }, 15000);
+    return () => clearTimeout(timer);
+  }, [status, candidate]);
 
   const signOut = useCallback(async () => {
     if (signingOut.current) return;
