@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
+  darkMode: "class",
   // NativeWind v4 uses its own content resolution
   content: [
     "./app/**/*.{ts,tsx}",
